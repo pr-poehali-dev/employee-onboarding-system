@@ -19,6 +19,28 @@ interface User {
   position: string;
 }
 
+interface Approver {
+  id: string;
+  name: string;
+  position: string;
+  department: string;
+  email: string;
+}
+
+interface ApprovalRequest {
+  id: string;
+  employeeName: string;
+  department: string;
+  subdivision: string;
+  position: string;
+  ipAddress: string;
+  orderDocument: string;
+  status: 'pending' | 'approved' | 'rejected' | 'installing' | 'completed';
+  approvers: Approver[];
+  createdAt: string;
+  approvedAt?: string;
+}
+
 interface Software {
   id: string;
   name: string;
@@ -44,8 +66,12 @@ const Index = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedSubdivision, setSelectedSubdivision] = useState('');
   const [selectedPosition, setSelectedPosition] = useState('');
   const [newEmployeeIP, setNewEmployeeIP] = useState('');
+  const [employeeName, setEmployeeName] = useState('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [currentRequest, setCurrentRequest] = useState<ApprovalRequest | null>(null);
 
   // Mock data
   const users: User[] = [
@@ -132,6 +158,58 @@ const Index = () => {
     const user = users.find(u => u.role === role);
     if (user) {
       setCurrentUser(user);
+    }
+  };
+
+  const handleSubmitForApproval = () => {
+    if (!selectedDepartment || !selectedPosition || !newEmployeeIP || !employeeName) {
+      alert('Пожалуйста, заполните все обязательные поля');
+      return;
+    }
+
+    const requestApprovers = approversArchive[selectedPosition] || [];
+    
+    const newRequest: ApprovalRequest = {
+      id: Date.now().toString(),
+      employeeName,
+      department: departments.find(d => d.id === selectedDepartment)?.name || '',
+      subdivision: selectedSubdivision,
+      position: selectedPosition,
+      ipAddress: newEmployeeIP,
+      orderDocument: uploadedFile?.name || 'Приказ загружен',
+      status: 'pending',
+      approvers: requestApprovers,
+      createdAt: new Date().toISOString()
+    };
+
+    setCurrentRequest(newRequest);
+    alert(`Заявка отправлена на согласование.\nСогласующие: ${requestApprovers.map(a => a.name).join(', ')}`);
+  };
+
+  const handleApprove = () => {
+    if (currentRequest) {
+      setCurrentRequest({
+        ...currentRequest,
+        status: 'approved',
+        approvedAt: new Date().toISOString()
+      });
+    }
+  };
+
+  const handleInstallSoftware = () => {
+    if (currentRequest) {
+      setCurrentRequest({
+        ...currentRequest,
+        status: 'installing'
+      });
+      
+      setTimeout(() => {
+        setCurrentRequest(prev => prev ? {
+          ...prev,
+          status: 'completed'
+        } : null);
+        alert('Программное обеспечение успешно установлено на рабочее место!');
+      }, 3000);
     }
   };
 
@@ -249,6 +327,21 @@ const Index = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">
+                      ФИО сотрудника <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Input 
+                        placeholder="Иванов Иван Иванович"
+                        value={employeeName}
+                        onChange={(e) => setEmployeeName(e.target.value)}
+                        className="pl-10"
+                      />
+                      <Icon name="User" size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
                       Дирекция/Служба <span className="text-red-500">*</span>
                     </label>
                     <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
@@ -272,7 +365,7 @@ const Index = () => {
                     <label className="text-sm font-medium text-foreground mb-2 block">
                       Отдел/Сектор <span className="text-red-500">*</span>
                     </label>
-                    <Select disabled={!selectedDepartment}>
+                    <Select value={selectedSubdivision} onValueChange={setSelectedSubdivision} disabled={!selectedDepartment}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Сначала выберите дирекцию" />
                       </SelectTrigger>
@@ -361,16 +454,53 @@ const Index = () => {
                       <Icon name="CheckCircle" size={16} className="mr-2 text-green-600" />
                       Статус заявки
                     </h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span>Заполнение данных</span>
-                        <Badge variant="secondary">В процессе</Badge>
+                    {currentRequest ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span>{currentRequest.employeeName}</span>
+                          <Badge variant={
+                            currentRequest.status === 'pending' ? 'secondary' :
+                            currentRequest.status === 'approved' ? 'default' :
+                            currentRequest.status === 'installing' ? 'outline' :
+                            currentRequest.status === 'completed' ? 'default' : 'destructive'
+                          }>
+                            {currentRequest.status === 'pending' ? 'На согласовании' :
+                             currentRequest.status === 'approved' ? 'Согласовано' :
+                             currentRequest.status === 'installing' ? 'Установка ПО' :
+                             currentRequest.status === 'completed' ? 'Завершено' : 'Отклонено'}
+                          </Badge>
+                        </div>
+                        <Progress value={
+                          currentRequest.status === 'pending' ? 25 :
+                          currentRequest.status === 'approved' ? 50 :
+                          currentRequest.status === 'installing' ? 75 :
+                          currentRequest.status === 'completed' ? 100 : 0
+                        } className="h-2" />
+                        {currentRequest.approvers.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground">Согласующие:</p>
+                            {currentRequest.approvers.map((approver, index) => (
+                              <div key={approver.id} className="flex items-center text-xs">
+                                <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                                <span className="flex-1">{approver.name}</span>
+                                <span className="text-muted-foreground">{approver.position}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <Progress value={60} className="h-2" />
-                      <p className="text-xs text-muted-foreground">
-                        Заполните все обязательные поля для отправки заявки
-                      </p>
-                    </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span>Заполнение данных</span>
+                          <Badge variant="secondary">В процессе</Badge>
+                        </div>
+                        <Progress value={60} className="h-2" />
+                        <p className="text-xs text-muted-foreground">
+                          Заполните все обязательные поля для отправки заявки
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -381,13 +511,32 @@ const Index = () => {
                   <Icon name="ArrowLeft" size={16} className="mr-2" />
                   Назад
                 </Button>
-                <Button 
-                  className="px-8"
-                  disabled={!selectedDepartment || !selectedPosition || !newEmployeeIP}
-                >
-                  <Icon name="Send" size={16} className="mr-2" />
-                  {currentUser.role === 'hr_specialist' ? 'Зарегистрировать сотрудника' : 'Отправить заявку'}
-                </Button>
+                <div className="flex gap-3">
+                  {currentRequest && currentRequest.status === 'approved' && (
+                    <Button 
+                      onClick={handleInstallSoftware}
+                      className="bg-green-600 hover:bg-green-700"
+                      disabled={currentRequest.status === 'installing'}
+                    >
+                      <Icon name="Download" size={16} className="mr-2" />
+                      {currentRequest.status === 'installing' ? 'Установка...' : 'Установить программы'}
+                    </Button>
+                  )}
+                  <Button 
+                    onClick={handleSubmitForApproval}
+                    className="px-8"
+                    disabled={!selectedDepartment || !selectedPosition || !newEmployeeIP || !employeeName || currentRequest?.status === 'pending'}
+                  >
+                    <Icon name="Send" size={16} className="mr-2" />
+                    {currentRequest ? 
+                      (currentRequest.status === 'pending' ? 'Заявка отправлена' : 
+                       currentRequest.status === 'approved' ? 'Согласовано' :
+                       currentRequest.status === 'installing' ? 'Установка ПО...' :
+                       currentRequest.status === 'completed' ? 'Завершено' : 'Отклонено') :
+                      (currentUser.role === 'hr_specialist' ? 'Отправить на согласование' : 'Отправить заявку')
+                    }
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -468,11 +617,12 @@ const Index = () => {
         </div>
 
         <Tabs defaultValue="software" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="software">Каталог ПО</TabsTrigger>
             <TabsTrigger value="requests">
               {currentUser.role === 'new_employee' ? 'Мой запрос' : 'Запросы'}
             </TabsTrigger>
+            <TabsTrigger value="approvers">Согласующие</TabsTrigger>
             <TabsTrigger value="logs">Журнал действий</TabsTrigger>
             <TabsTrigger value="analytics">Аналитика</TabsTrigger>
           </TabsList>
@@ -625,6 +775,106 @@ const Index = () => {
                     <p className="text-muted-foreground">Новые запросы от сотрудников появятся здесь</p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="approvers" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Icon name="Users" size={20} className="mr-2" />
+                  Архив согласующих по должностям
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Управление списком согласующих лиц для каждой должности
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {Object.entries(approversArchive).map(([position, approvers]) => (
+                    <Card key={position} className="border-l-4 border-l-primary">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center justify-between">
+                          <div className="flex items-center">
+                            <Icon name="Briefcase" size={18} className="mr-2" />
+                            {position}
+                          </div>
+                          <Badge variant="outline">
+                            {approvers.length} согласующих
+                          </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {approvers.map((approver) => (
+                            <Card key={approver.id} className="border border-slate-200">
+                              <CardContent className="p-4">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center mb-2">
+                                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                                        <Icon name="User" size={16} className="text-primary" />
+                                      </div>
+                                      <div>
+                                        <h4 className="font-medium text-sm">{approver.name}</h4>
+                                        <p className="text-xs text-muted-foreground">{approver.position}</p>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1 text-xs">
+                                      <div className="flex items-center text-muted-foreground">
+                                        <Icon name="Building" size={12} className="mr-1" />
+                                        {approver.department}
+                                      </div>
+                                      <div className="flex items-center text-muted-foreground">
+                                        <Icon name="Mail" size={12} className="mr-1" />
+                                        {approver.email}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                                      <Icon name="Edit2" size={12} />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-600">
+                                      <Icon name="Trash2" size={12} />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                          <Card className="border-2 border-dashed border-slate-300 hover:border-slate-400 transition-colors">
+                            <CardContent className="p-4 flex items-center justify-center">
+                              <Button variant="ghost" className="h-full w-full flex-col space-y-2 text-slate-500 hover:text-slate-700">
+                                <Icon name="Plus" size={20} />
+                                <span className="text-xs">Добавить согласующего</span>
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  <Card className="border-2 border-dashed border-slate-300">
+                    <CardContent className="p-6 text-center">
+                      <div className="flex flex-col items-center space-y-3">
+                        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
+                          <Icon name="Plus" size={24} className="text-slate-400" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">Добавить новую должность</h3>
+                          <p className="text-sm text-muted-foreground">Создайте архив согласующих для новой должности</p>
+                        </div>
+                        <Button variant="outline">
+                          <Icon name="Plus" size={16} className="mr-2" />
+                          Добавить должность
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
