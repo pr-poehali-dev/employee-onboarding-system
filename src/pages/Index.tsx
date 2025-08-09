@@ -320,6 +320,60 @@ const Index = () => {
     }
   ];
 
+  // Архив согласующих по должностям
+  const approversArchive: Record<string, Approver[]> = {
+    'Экономист': [
+      {
+        id: 'app-1',
+        name: 'Петров Алексей Николаевич',
+        position: 'Начальник планово-экономического отдела',
+        department: 'Финансовая дирекция',
+        email: 'petrov.an@company.ru'
+      },
+      {
+        id: 'app-2',
+        name: 'Сидорова Елена Владимировна',
+        position: 'Заместитель директора по финансам',
+        department: 'Финансовая дирекция',
+        email: 'sidorova.ev@company.ru'
+      }
+    ],
+    'Программист': [
+      {
+        id: 'app-3',
+        name: 'Козлов Дмитрий Сергеевич',
+        position: 'Ведущий программист',
+        department: 'Служба ИТ',
+        email: 'kozlov.ds@company.ru'
+      },
+      {
+        id: 'app-4',
+        name: 'Морозова Анна Петровна',
+        position: 'Начальник отдела разработки',
+        department: 'Служба ИТ',
+        email: 'morozova.ap@company.ru'
+      }
+    ],
+    'Бухгалтер': [
+      {
+        id: 'app-5',
+        name: 'Федорова Ольга Ивановна',
+        position: 'Главный бухгалтер',
+        department: 'Финансовая дирекция',
+        email: 'fedorova.oi@company.ru'
+      }
+    ],
+    'Системный администратор': [
+      {
+        id: 'app-6',
+        name: 'Волков Игорь Александрович',
+        position: 'Заместитель начальника службы ИТ',
+        department: 'Служба ИТ',
+        email: 'volkov.ia@company.ru'
+      }
+    ]
+  };
+
   const activityLogs: LogEntry[] = [
     {
       id: '1',
