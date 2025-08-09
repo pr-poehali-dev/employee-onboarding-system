@@ -1,11 +1,568 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Progress } from '@/components/ui/progress';
+import Icon from '@/components/ui/icon';
+
+type UserRole = 'technician' | 'hr_specialist' | 'new_employee';
+
+interface User {
+  id: string;
+  name: string;
+  role: UserRole;
+  department: string;
+  position: string;
+}
+
+interface Software {
+  id: string;
+  name: string;
+  category: string;
+  version: string;
+  department: string;
+  position: string;
+  status: 'approved' | 'pending' | 'restricted';
+  licenseDocument: string;
+  approvalOrder: string;
+}
+
+interface LogEntry {
+  id: string;
+  timestamp: string;
+  user: string;
+  action: string;
+  target: string;
+  status: 'success' | 'warning' | 'error';
+}
 
 const Index = () => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedPosition, setSelectedPosition] = useState('');
+  const [newEmployeeIP, setNewEmployeeIP] = useState('');
+
+  // Mock data
+  const users: User[] = [
+    { id: '1', name: 'Техник Иванов', role: 'technician', department: 'IT', position: 'Системный администратор' },
+    { id: '2', name: 'HR Петрова', role: 'hr_specialist', department: 'Кадры', position: 'Специалист по персоналу' },
+    { id: '3', name: 'Новичок Сидоров', role: 'new_employee', department: 'Финансы', position: 'Экономист' }
+  ];
+
+  const departments = [
+    { id: 'finance', name: 'Финансовая дирекция', subdivisions: ['Бухгалтерия', 'Планово-экономический отдел'] },
+    { id: 'it', name: 'Служба информационных технологий', subdivisions: ['Отдел разработки', 'Системное администрирование'] },
+    { id: 'hr', name: 'Дирекция по персоналу', subdivisions: ['Отдел кадров', 'Отдел обучения'] }
+  ];
+
+  const positions = [
+    'Системный администратор', 'Программист', 'Экономист', 'Бухгалтер', 
+    'Специалист по персоналу', 'Менеджер проектов'
+  ];
+
+  const software: Software[] = [
+    {
+      id: '1',
+      name: 'Microsoft Office 365',
+      category: 'Офисные приложения',
+      version: '2024',
+      department: 'Все дирекции',
+      position: 'Все должности',
+      status: 'approved',
+      licenseDocument: 'Лицензия MS365-2024.pdf',
+      approvalOrder: 'Приказ №45 от 15.01.2024'
+    },
+    {
+      id: '2',
+      name: '1C: Бухгалтерия',
+      category: 'Учетные системы',
+      version: '8.3',
+      department: 'Финансовая дирекция',
+      position: 'Бухгалтер, Экономист',
+      status: 'approved',
+      licenseDocument: 'Лицензия 1С-БУХ.pdf',
+      approvalOrder: 'Приказ №12 от 03.02.2024'
+    },
+    {
+      id: '3',
+      name: 'AutoCAD',
+      category: 'САПР',
+      version: '2024',
+      department: 'Техническая дирекция',
+      position: 'Инженер-конструктор',
+      status: 'pending',
+      licenseDocument: 'В обработке',
+      approvalOrder: 'В обработке'
+    }
+  ];
+
+  const activityLogs: LogEntry[] = [
+    {
+      id: '1',
+      timestamp: '2024-08-09 14:30:25',
+      user: 'Техник Иванов',
+      action: 'Установка ПО',
+      target: 'Microsoft Office 365 → Рабочее место №15',
+      status: 'success'
+    },
+    {
+      id: '2',
+      timestamp: '2024-08-09 13:15:42',
+      user: 'HR Петрова',
+      action: 'Загрузка документа',
+      target: 'Приказ о принятии на работу',
+      status: 'success'
+    },
+    {
+      id: '3',
+      timestamp: '2024-08-09 12:45:18',
+      user: 'Новичок Сидоров',
+      action: 'Запрос доступа',
+      target: '1C: Бухгалтерия',
+      status: 'warning'
+    }
+  ];
+
+  const handleLogin = (role: UserRole) => {
+    const user = users.find(u => u.role === role);
+    if (user) {
+      setCurrentUser(user);
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setLoginEmail('');
+    setSelectedDepartment('');
+    setSelectedPosition('');
+    setNewEmployeeIP('');
+  };
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="bg-primary/10 p-3 rounded-full">
+                <Icon name="Shield" size={32} className="text-primary" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold">Система управления ПО</CardTitle>
+            <p className="text-muted-foreground">Войдите для доступа к системе</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Input
+                placeholder="Email или логин"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+              />
+              <Input
+                type="password"
+                placeholder="Пароль"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Демо-доступ:</p>
+              <div className="grid gap-2">
+                <Button 
+                  onClick={() => handleLogin('technician')}
+                  className="w-full justify-start"
+                  variant="outline"
+                >
+                  <Icon name="Settings" size={16} className="mr-2" />
+                  Войти как Техник
+                </Button>
+                <Button 
+                  onClick={() => handleLogin('hr_specialist')}
+                  className="w-full justify-start"
+                  variant="outline"
+                >
+                  <Icon name="Users" size={16} className="mr-2" />
+                  Войти как HR-специалист
+                </Button>
+                <Button 
+                  onClick={() => handleLogin('new_employee')}
+                  className="w-full justify-start"
+                  variant="outline"
+                >
+                  <Icon name="UserPlus" size={16} className="mr-2" />
+                  Войти как Новый сотрудник
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4 color-black text-black">Добро пожаловать!</h1>
-        <p className="text-xl text-gray-600">тут будет отображаться ваш проект</p>
+    <div className="min-h-screen bg-slate-50">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="bg-primary/10 p-2 rounded-lg">
+              <Icon name="Shield" size={24} className="text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold">Система управления ПО</h1>
+              <p className="text-sm text-muted-foreground">
+                Пользователь: {currentUser.name} • {currentUser.role === 'technician' ? 'Техник' : 
+                  currentUser.role === 'hr_specialist' ? 'HR-специалист' : 'Новый сотрудник'}
+              </p>
+            </div>
+          </div>
+          <Button onClick={handleLogout} variant="outline" size="sm">
+            <Icon name="LogOut" size={16} className="mr-2" />
+            Выйти
+          </Button>
+        </div>
+      </header>
+
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Всего программ</CardTitle>
+              <Icon name="Package" size={16} className="text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{software.length}</div>
+              <p className="text-xs text-muted-foreground">+2 за последний месяц</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Активные лицензии</CardTitle>
+              <Icon name="FileCheck" size={16} className="text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{software.filter(s => s.status === 'approved').length}</div>
+              <p className="text-xs text-muted-foreground">Действующих разрешений</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Установок сегодня</CardTitle>
+              <Icon name="Download" size={16} className="text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">12</div>
+              <p className="text-xs text-muted-foreground">+3 с вчера</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Загруженность</CardTitle>
+              <Icon name="TrendingUp" size={16} className="text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">85%</div>
+              <Progress value={85} className="mt-2" />
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="software" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="software">Каталог ПО</TabsTrigger>
+            <TabsTrigger value="requests">
+              {currentUser.role === 'new_employee' ? 'Мой запрос' : 'Запросы'}
+            </TabsTrigger>
+            <TabsTrigger value="logs">Журнал действий</TabsTrigger>
+            <TabsTrigger value="analytics">Аналитика</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="software" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Icon name="Package" size={20} className="mr-2" />
+                  Каталог программного обеспечения
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Название ПО</TableHead>
+                      <TableHead>Категория</TableHead>
+                      <TableHead>Дирекция/Отдел</TableHead>
+                      <TableHead>Должности</TableHead>
+                      <TableHead>Статус</TableHead>
+                      {currentUser.role === 'technician' && <TableHead>Действия</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {software.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{item.name}</div>
+                            <div className="text-sm text-muted-foreground">v{item.version}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{item.category}</TableCell>
+                        <TableCell>{item.department}</TableCell>
+                        <TableCell>{item.position}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              item.status === 'approved' ? 'default' : 
+                              item.status === 'pending' ? 'secondary' : 'destructive'
+                            }
+                          >
+                            {item.status === 'approved' ? 'Одобрено' : 
+                             item.status === 'pending' ? 'В ожидании' : 'Ограничено'}
+                          </Badge>
+                        </TableCell>
+                        {currentUser.role === 'technician' && (
+                          <TableCell>
+                            <Button size="sm" variant="outline">
+                              <Icon name="Download" size={14} className="mr-1" />
+                              Установить
+                            </Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="requests" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Icon name="FileText" size={20} className="mr-2" />
+                  {currentUser.role === 'new_employee' ? 'Запрос доступа к ПО' : 'Управление запросами'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {currentUser.role === 'new_employee' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium">Дирекция/Служба</label>
+                        <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите дирекцию" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {departments.map(dept => (
+                              <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium">Отдел/Сектор</label>
+                        <Select>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите отдел" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedDepartment && departments.find(d => d.id === selectedDepartment)?.subdivisions.map(sub => (
+                              <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium">Должность</label>
+                        <Select value={selectedPosition} onValueChange={setSelectedPosition}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите должность" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {positions.map(pos => (
+                              <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium">IP адрес рабочего места</label>
+                        <Input 
+                          placeholder="192.168.1.100"
+                          value={newEmployeeIP}
+                          onChange={(e) => setNewEmployeeIP(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium">Приказ о принятии на работу</label>
+                        <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center">
+                          <Icon name="Upload" size={24} className="mx-auto text-slate-400 mb-2" />
+                          <p className="text-sm text-slate-500">Перетащите файл или нажмите для выбора</p>
+                          <Button variant="outline" size="sm" className="mt-2">
+                            Выбрать файл
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <Button className="w-full">
+                        <Icon name="Send" size={16} className="mr-2" />
+                        Отправить запрос
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Icon name="Inbox" size={48} className="mx-auto text-slate-400 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Нет активных запросов</h3>
+                    <p className="text-muted-foreground">Новые запросы от сотрудников появятся здесь</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="logs" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Icon name="Activity" size={20} className="mr-2" />
+                  Журнал действий пользователей
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Время</TableHead>
+                      <TableHead>Пользователь</TableHead>
+                      <TableHead>Действие</TableHead>
+                      <TableHead>Объект</TableHead>
+                      <TableHead>Статус</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {activityLogs.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="font-mono text-sm">{log.timestamp}</TableCell>
+                        <TableCell>{log.user}</TableCell>
+                        <TableCell>{log.action}</TableCell>
+                        <TableCell>{log.target}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              log.status === 'success' ? 'default' : 
+                              log.status === 'warning' ? 'secondary' : 'destructive'
+                            }
+                          >
+                            <Icon 
+                              name={
+                                log.status === 'success' ? 'CheckCircle' : 
+                                log.status === 'warning' ? 'AlertTriangle' : 'XCircle'
+                              } 
+                              size={12} 
+                              className="mr-1" 
+                            />
+                            {log.status === 'success' ? 'Успешно' : 
+                             log.status === 'warning' ? 'Предупреждение' : 'Ошибка'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Icon name="PieChart" size={20} className="mr-2" />
+                    Распределение по дирекциям
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span>Финансовая дирекция</span>
+                      <div className="flex items-center space-x-2">
+                        <Progress value={40} className="w-20" />
+                        <span className="text-sm">40%</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>IT-служба</span>
+                      <div className="flex items-center space-x-2">
+                        <Progress value={35} className="w-20" />
+                        <span className="text-sm">35%</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Дирекция по персоналу</span>
+                      <div className="flex items-center space-x-2">
+                        <Progress value={25} className="w-20" />
+                        <span className="text-sm">25%</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Icon name="BarChart3" size={20} className="mr-2" />
+                    Активность по месяцам
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span>Июль 2024</span>
+                      <div className="flex items-center space-x-2">
+                        <Progress value={85} className="w-20" />
+                        <span className="text-sm">85</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Июнь 2024</span>
+                      <div className="flex items-center space-x-2">
+                        <Progress value={72} className="w-20" />
+                        <span className="text-sm">72</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Май 2024</span>
+                      <div className="flex items-center space-x-2">
+                        <Progress value={68} className="w-20" />
+                        <span className="text-sm">68</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
