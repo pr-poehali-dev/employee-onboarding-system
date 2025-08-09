@@ -204,6 +204,198 @@ const Index = () => {
     );
   }
 
+  // New employee and HR specialist see the form interface
+  if (currentUser.role === 'new_employee' || currentUser.role === 'hr_specialist') {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        {/* Header */}
+        <header className="bg-white border-b border-slate-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="bg-primary/10 p-2 rounded-lg">
+                <Icon name="Shield" size={24} className="text-primary" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold">Система управления ПО</h1>
+                <p className="text-sm text-muted-foreground">
+                  Пользователь: {currentUser.name} • {currentUser.role === 'hr_specialist' ? 'HR-специалист' : 'Новый сотрудник'}
+                </p>
+              </div>
+            </div>
+            <Button onClick={handleLogout} variant="outline" size="sm">
+              <Icon name="LogOut" size={16} className="mr-2" />
+              Выйти
+            </Button>
+          </div>
+        </header>
+
+        <div className="p-6 max-w-4xl mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center text-2xl">
+                <Icon name="UserPlus" size={24} className="mr-3" />
+                {currentUser.role === 'hr_specialist' ? 'Регистрация нового сотрудника' : 'Заявка на доступ к ПО'}
+              </CardTitle>
+              <p className="text-muted-foreground">
+                {currentUser.role === 'hr_specialist' 
+                  ? 'Заполните данные для регистрации нового сотрудника в системе'
+                  : 'Укажите ваши данные для получения доступа к необходимому программному обеспечению'
+                }
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column - Form Fields */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Дирекция/Служба <span className="text-red-500">*</span>
+                    </label>
+                    <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Выберите дирекцию или службу" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map(dept => (
+                          <SelectItem key={dept.id} value={dept.id}>
+                            <div className="flex items-center">
+                              <Icon name="Building" size={16} className="mr-2" />
+                              {dept.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Отдел/Сектор <span className="text-red-500">*</span>
+                    </label>
+                    <Select disabled={!selectedDepartment}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Сначала выберите дирекцию" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedDepartment && departments.find(d => d.id === selectedDepartment)?.subdivisions.map(sub => (
+                          <SelectItem key={sub} value={sub}>
+                            <div className="flex items-center">
+                              <Icon name="Users" size={16} className="mr-2" />
+                              {sub}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Должность <span className="text-red-500">*</span>
+                    </label>
+                    <Select value={selectedPosition} onValueChange={setSelectedPosition}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Выберите должность" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {positions.map(pos => (
+                          <SelectItem key={pos} value={pos}>
+                            <div className="flex items-center">
+                              <Icon name="Briefcase" size={16} className="mr-2" />
+                              {pos}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      IP адрес компьютера <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Input 
+                        placeholder="Например: 192.168.1.100"
+                        value={newEmployeeIP}
+                        onChange={(e) => setNewEmployeeIP(e.target.value)}
+                        className="pl-10"
+                      />
+                      <Icon name="Monitor" size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Укажите IP адрес рабочего места, на котором будет установлено ПО
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right Column - File Upload */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Приказ о принятии на работу <span className="text-red-500">*</span>
+                    </label>
+                    <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center bg-slate-50 hover:bg-slate-100 transition-colors">
+                      <div className="flex flex-col items-center space-y-3">
+                        <div className="bg-primary/10 p-3 rounded-full">
+                          <Icon name="Upload" size={24} className="text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Перетащите файл сюда</p>
+                          <p className="text-xs text-muted-foreground">или нажмите для выбора</p>
+                        </div>
+                        <Button variant="outline" size="sm" className="mt-2">
+                          <Icon name="FolderOpen" size={16} className="mr-2" />
+                          Выбрать файл
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Поддерживаемые форматы: PDF, DOC, DOCX (макс. 10 МБ)
+                    </p>
+                  </div>
+
+                  {/* Progress/Status Section */}
+                  <div className="bg-slate-100 rounded-lg p-4">
+                    <h4 className="font-medium text-sm mb-3 flex items-center">
+                      <Icon name="CheckCircle" size={16} className="mr-2 text-green-600" />
+                      Статус заявки
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Заполнение данных</span>
+                        <Badge variant="secondary">В процессе</Badge>
+                      </div>
+                      <Progress value={60} className="h-2" />
+                      <p className="text-xs text-muted-foreground">
+                        Заполните все обязательные поля для отправки заявки
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-between pt-6 border-t">
+                <Button variant="outline" onClick={handleLogout}>
+                  <Icon name="ArrowLeft" size={16} className="mr-2" />
+                  Назад
+                </Button>
+                <Button 
+                  className="px-8"
+                  disabled={!selectedDepartment || !selectedPosition || !newEmployeeIP}
+                >
+                  <Icon name="Send" size={16} className="mr-2" />
+                  {currentUser.role === 'hr_specialist' ? 'Зарегистрировать сотрудника' : 'Отправить заявку'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -216,8 +408,7 @@ const Index = () => {
             <div>
               <h1 className="text-xl font-semibold">Система управления ПО</h1>
               <p className="text-sm text-muted-foreground">
-                Пользователь: {currentUser.name} • {currentUser.role === 'technician' ? 'Техник' : 
-                  currentUser.role === 'hr_specialist' ? 'HR-специалист' : 'Новый сотрудник'}
+                Пользователь: {currentUser.name} • Техник
               </p>
             </div>
           </div>
