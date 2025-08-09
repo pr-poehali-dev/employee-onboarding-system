@@ -47,10 +47,23 @@ interface Software {
   category: string;
   version: string;
   department: string;
-  position: string;
+  position: string[];
   status: 'approved' | 'pending' | 'restricted';
   licenseDocument: string;
   approvalOrder: string;
+  description?: string;
+  installPath?: string;
+}
+
+interface AllowedSoftware {
+  directorate: string;
+  departments: {
+    name: string;
+    positions: {
+      name: string;
+      software: Software[];
+    }[];
+  }[];
 }
 
 interface LogEntry {
@@ -72,6 +85,9 @@ const Index = () => {
   const [employeeName, setEmployeeName] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [currentRequest, setCurrentRequest] = useState<ApprovalRequest | null>(null);
+  const [searchPosition, setSearchPosition] = useState('');
+  const [selectedDirectorate, setSelectedDirectorate] = useState('');
+  const [selectedDept, setSelectedDept] = useState('');
 
   // Mock data
   const users: User[] = [
@@ -91,6 +107,183 @@ const Index = () => {
     'Специалист по персоналу', 'Менеджер проектов'
   ];
 
+  // База данных разрешенных программ по иерархии
+  const allowedSoftwareDB: AllowedSoftware[] = [
+    {
+      directorate: 'Финансовая дирекция',
+      departments: [
+        {
+          name: 'Бухгалтерия',
+          positions: [
+            {
+              name: 'Главный бухгалтер',
+              software: [
+                {
+                  id: 'fin-1',
+                  name: '1С:Предприятие 8.3',
+                  category: 'Учетные системы',
+                  version: '8.3.25',
+                  department: 'Финансовая дирекция',
+                  position: ['Главный бухгалтер', 'Бухгалтер'],
+                  status: 'approved',
+                  licenseDocument: 'Лицензия №123',
+                  approvalOrder: 'Приказ №456',
+                  description: 'Система ведения бухгалтерского и налогового учета'
+                },
+                {
+                  id: 'fin-2',
+                  name: 'Консультант Плюс',
+                  category: 'Справочно-правовые системы',
+                  version: '2024',
+                  department: 'Финансовая дирекция',
+                  position: ['Главный бухгалтер', 'Бухгалтер', 'Экономист'],
+                  status: 'approved',
+                  licenseDocument: 'Договор №789',
+                  approvalOrder: 'Приказ №101'
+                }
+              ]
+            },
+            {
+              name: 'Бухгалтер',
+              software: [
+                {
+                  id: 'fin-1',
+                  name: '1С:Предприятие 8.3',
+                  category: 'Учетные системы',
+                  version: '8.3.25',
+                  department: 'Финансовая дирекция',
+                  position: ['Главный бухгалтер', 'Бухгалтер'],
+                  status: 'approved',
+                  licenseDocument: 'Лицензия №123',
+                  approvalOrder: 'Приказ №456'
+                },
+                {
+                  id: 'off-1',
+                  name: 'Microsoft Office 365',
+                  category: 'Офисные приложения',
+                  version: '2024',
+                  department: 'Все дирекции',
+                  position: ['Все должности'],
+                  status: 'approved',
+                  licenseDocument: 'Корпоративная лицензия',
+                  approvalOrder: 'Приказ №001'
+                }
+              ]
+            }
+          ]
+        },
+        {
+          name: 'Планово-экономический отдел',
+          positions: [
+            {
+              name: 'Экономист',
+              software: [
+                {
+                  id: 'fin-3',
+                  name: 'Project Expert',
+                  category: 'Системы планирования',
+                  version: '7.67',
+                  department: 'Финансовая дирекция',
+                  position: ['Экономист'],
+                  status: 'approved',
+                  licenseDocument: 'Лицензия №555',
+                  approvalOrder: 'Приказ №777'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      directorate: 'Служба информационных технологий',
+      departments: [
+        {
+          name: 'Отдел разработки',
+          positions: [
+            {
+              name: 'Программист',
+              software: [
+                {
+                  id: 'it-1',
+                  name: 'Visual Studio Code',
+                  category: 'Среды разработки',
+                  version: '1.89',
+                  department: 'Служба ИТ',
+                  position: ['Программист'],
+                  status: 'approved',
+                  licenseDocument: 'Бесплатная лицензия',
+                  approvalOrder: 'Приказ №888'
+                },
+                {
+                  id: 'it-2',
+                  name: 'Git for Windows',
+                  category: 'Системы контроля версий',
+                  version: '2.45',
+                  department: 'Служба ИТ',
+                  position: ['Программист', 'Системный администратор'],
+                  status: 'approved',
+                  licenseDocument: 'Open Source',
+                  approvalOrder: 'Приказ №999'
+                }
+              ]
+            }
+          ]
+        },
+        {
+          name: 'Системное администрирование',
+          positions: [
+            {
+              name: 'Системный администратор',
+              software: [
+                {
+                  id: 'it-3',
+                  name: 'Windows Server Remote Tools',
+                  category: 'Администрирование',
+                  version: '2022',
+                  department: 'Служба ИТ',
+                  position: ['Системный администратор'],
+                  status: 'approved',
+                  licenseDocument: 'Корпоративная лицензия MS',
+                  approvalOrder: 'Приказ №111'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ];
+
+  // Функции поиска и фильтрации
+  const searchSoftwareByPosition = (positionQuery: string) => {
+    const results: Software[] = [];
+    allowedSoftwareDB.forEach(directorate => {
+      directorate.departments.forEach(dept => {
+        dept.positions.forEach(pos => {
+          if (pos.name.toLowerCase().includes(positionQuery.toLowerCase())) {
+            results.push(...pos.software);
+          }
+        });
+      });
+    });
+    return results;
+  };
+
+  const getAllPositions = () => {
+    const positions: string[] = [];
+    allowedSoftwareDB.forEach(directorate => {
+      directorate.departments.forEach(dept => {
+        dept.positions.forEach(pos => {
+          if (!positions.includes(pos.name)) {
+            positions.push(pos.name);
+          }
+        });
+      });
+    });
+    return positions.sort();
+  };
+
   const software: Software[] = [
     {
       id: '1',
@@ -98,7 +291,7 @@ const Index = () => {
       category: 'Офисные приложения',
       version: '2024',
       department: 'Все дирекции',
-      position: 'Все должности',
+      position: ['Все должности'],
       status: 'approved',
       licenseDocument: 'Лицензия MS365-2024.pdf',
       approvalOrder: 'Приказ №45 от 15.01.2024'
@@ -109,7 +302,7 @@ const Index = () => {
       category: 'Учетные системы',
       version: '8.3',
       department: 'Финансовая дирекция',
-      position: 'Бухгалтер, Экономист',
+      position: ['Бухгалтер', 'Экономист'],
       status: 'approved',
       licenseDocument: 'Лицензия 1С-БУХ.pdf',
       approvalOrder: 'Приказ №12 от 03.02.2024'
@@ -617,11 +810,12 @@ const Index = () => {
         </div>
 
         <Tabs defaultValue="software" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="software">Каталог ПО</TabsTrigger>
             <TabsTrigger value="requests">
               {currentUser.role === 'new_employee' ? 'Мой запрос' : 'Запросы'}
             </TabsTrigger>
+            <TabsTrigger value="allowed-software">База разрешений</TabsTrigger>
             <TabsTrigger value="approvers">Согласующие</TabsTrigger>
             <TabsTrigger value="logs">Журнал действий</TabsTrigger>
             <TabsTrigger value="analytics">Аналитика</TabsTrigger>
@@ -874,6 +1068,248 @@ const Index = () => {
                       </div>
                     </CardContent>
                   </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="allowed-software" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Icon name="Database" size={20} className="mr-2" />
+                    База разрешенного программного обеспечения
+                  </div>
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Управление разрешенными программами по дирекциям, отделам и должностям
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {/* Поиск по должности */}
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="text-sm font-medium block mb-2">Поиск по должности</label>
+                      <Input
+                        placeholder="Введите название должности..."
+                        value={searchPosition}
+                        onChange={(e) => setSearchPosition(e.target.value)}
+                        className="max-w-md"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <div>
+                        <label className="text-sm font-medium block mb-2">Дирекция</label>
+                        <Select value={selectedDirectorate} onValueChange={setSelectedDirectorate}>
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Выберите дирекцию" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Все дирекции</SelectItem>
+                            {allowedSoftwareDB.map(dir => (
+                              <SelectItem key={dir.directorate} value={dir.directorate}>
+                                {dir.directorate}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium block mb-2">Отдел</label>
+                        <Select value={selectedDept} onValueChange={setSelectedDept}>
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Выберите отдел" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Все отделы</SelectItem>
+                            {selectedDirectorate && 
+                              allowedSoftwareDB
+                                .find(d => d.directorate === selectedDirectorate)
+                                ?.departments.map(dept => (
+                                  <SelectItem key={dept.name} value={dept.name}>
+                                    {dept.name}
+                                  </SelectItem>
+                                ))
+                            }
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Результаты поиска */}
+                  {searchPosition && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-medium mb-3 text-blue-800 flex items-center">
+                        <Icon name="Search" size={16} className="mr-2" />
+                        Результаты поиска по должности: "{searchPosition}"
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {searchSoftwareByPosition(searchPosition).map((software) => (
+                          <Card key={software.id} className="border border-blue-200 bg-white">
+                            <CardContent className="p-3">
+                              <div className="flex justify-between items-start mb-2">
+                                <h5 className="font-medium text-sm">{software.name}</h5>
+                                <Badge variant="secondary" className="text-xs">
+                                  {software.category}
+                                </Badge>
+                              </div>
+                              <div className="space-y-1 text-xs text-muted-foreground">
+                                <p>Версия: {software.version}</p>
+                                <p>Должности: {software.position.join(', ')}</p>
+                                <p>Лицензия: {software.licenseDocument}</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Иерархическое отображение */}
+                  <div className="space-y-6">
+                    {allowedSoftwareDB
+                      .filter(dir => !selectedDirectorate || dir.directorate === selectedDirectorate)
+                      .map((directorate) => (
+                      <Card key={directorate.directorate} className="border-l-4 border-l-blue-500">
+                        <CardHeader className="pb-4">
+                          <CardTitle className="text-xl flex items-center">
+                            <Icon name="Building2" size={20} className="mr-2 text-blue-600" />
+                            {directorate.directorate}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            {directorate.departments
+                              .filter(dept => !selectedDept || dept.name === selectedDept)
+                              .map((department) => (
+                              <Card key={department.name} className="border border-slate-200">
+                                <CardHeader className="pb-3">
+                                  <CardTitle className="text-lg flex items-center justify-between">
+                                    <div className="flex items-center">
+                                      <Icon name="Building" size={18} className="mr-2 text-slate-600" />
+                                      {department.name}
+                                    </div>
+                                    <Badge variant="outline">
+                                      {department.positions.length} должностей
+                                    </Badge>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="space-y-4">
+                                    {department.positions.map((position) => (
+                                      <Card key={position.name} className="bg-slate-50 border border-slate-200">
+                                        <CardContent className="p-4">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <h4 className="font-medium flex items-center">
+                                              <Icon name="User" size={16} className="mr-2 text-slate-500" />
+                                              {position.name}
+                                            </h4>
+                                            <Badge variant="secondary">
+                                              {position.software.length} программ
+                                            </Badge>
+                                          </div>
+                                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {position.software.map((software) => (
+                                              <Card key={software.id} className="border border-white bg-white shadow-sm">
+                                                <CardContent className="p-3">
+                                                  <div className="flex justify-between items-start mb-2">
+                                                    <h5 className="font-medium text-sm leading-tight">
+                                                      {software.name}
+                                                    </h5>
+                                                    <Badge 
+                                                      variant={software.status === 'approved' ? 'default' : 
+                                                              software.status === 'pending' ? 'secondary' : 'destructive'} 
+                                                      className="text-xs ml-2 shrink-0"
+                                                    >
+                                                      {software.status === 'approved' ? 'Разрешено' :
+                                                       software.status === 'pending' ? 'На рассмотрении' : 'Ограничено'}
+                                                    </Badge>
+                                                  </div>
+                                                  <div className="space-y-1 text-xs text-muted-foreground">
+                                                    <div className="flex items-center">
+                                                      <Icon name="Tag" size={10} className="mr-1" />
+                                                      {software.category}
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                      <Icon name="Hash" size={10} className="mr-1" />
+                                                      v{software.version}
+                                                    </div>
+                                                    {software.description && (
+                                                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                                                        {software.description}
+                                                      </p>
+                                                    )}
+                                                  </div>
+                                                  <div className="flex gap-1 mt-3">
+                                                    <Button size="sm" variant="ghost" className="h-6 px-2 text-xs">
+                                                      <Icon name="Edit2" size={10} className="mr-1" />
+                                                      Изменить
+                                                    </Button>
+                                                    <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-red-500 hover:text-red-600">
+                                                      <Icon name="Trash2" size={10} className="mr-1" />
+                                                      Удалить
+                                                    </Button>
+                                                  </div>
+                                                </CardContent>
+                                              </Card>
+                                            ))}
+                                            <Card className="border-2 border-dashed border-slate-300 hover:border-slate-400 transition-colors">
+                                              <CardContent className="p-3 flex items-center justify-center h-full min-h-[120px]">
+                                                <Button variant="ghost" className="flex-col space-y-1 text-slate-500 hover:text-slate-700 h-full">
+                                                  <Icon name="Plus" size={16} />
+                                                  <span className="text-xs">Добавить ПО</span>
+                                                </Button>
+                                              </CardContent>
+                                            </Card>
+                                          </div>
+                                        </CardContent>
+                                      </Card>
+                                    ))}
+                                    <Card className="border-2 border-dashed border-slate-300">
+                                      <CardContent className="p-4 text-center">
+                                        <Button variant="ghost" className="flex items-center text-slate-500 hover:text-slate-700">
+                                          <Icon name="Plus" size={16} className="mr-2" />
+                                          Добавить должность в {department.name}
+                                        </Button>
+                                      </CardContent>
+                                    </Card>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                            <Card className="border-2 border-dashed border-slate-300">
+                              <CardContent className="p-4 text-center">
+                                <Button variant="ghost" className="flex items-center text-slate-500 hover:text-slate-700">
+                                  <Icon name="Plus" size={16} className="mr-2" />
+                                  Добавить отдел в {directorate.directorate}
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    <Card className="border-2 border-dashed border-slate-300">
+                      <CardContent className="p-6 text-center">
+                        <div className="flex flex-col items-center space-y-3">
+                          <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
+                            <Icon name="Plus" size={24} className="text-slate-400" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium">Добавить новую дирекцию</h3>
+                            <p className="text-sm text-muted-foreground">Создайте структуру для новой дирекции</p>
+                          </div>
+                          <Button variant="outline">
+                            <Icon name="Plus" size={16} className="mr-2" />
+                            Добавить дирекцию
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
               </CardContent>
             </Card>
